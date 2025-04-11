@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <windows.h>
+#include <sstream>
 
 using namespace std;
 
@@ -15,34 +16,48 @@ double calculateGrade(const vector<double>& scores, const vector<double>& weight
     return (weightSum == 0) ? 0 : total / weightSum;
 }
 
-// Show a popup with the prompt, then collect input in terminal
+// Pop-up message box with input fallback in terminal
 template <typename T>
-T prompt(const string& label, const string& instructions = "") {
-    string message = label + "\n\nEnter this in the terminal below.\n";
+T popupInput(const string& label, const string& instructions = "") {
+    string message = label + "\n\nPlease enter your response in the terminal.";
     if (!instructions.empty()) {
-        message += "\nInstructions: " + instructions;
+        message += "\n\n" + instructions;
     }
-    MessageBoxA(NULL, message.c_str(), "Input Needed", MB_OK | MB_ICONINFORMATION);
-    T value;
+    MessageBoxA(NULL, message.c_str(), "Input Required", MB_OK | MB_ICONINFORMATION);
+    
     cout << label << " ";
+    T value;
+    cin >> value;
+    return value;
+}
+
+// Step 1: Only numAssignments moved fully to popup
+int getIntInputPopup(const string& promptText) {
+    char input[256];
+    string label = promptText + "\n\n(Enter a number and click OK)";
+    MessageBoxA(NULL, label.c_str(), "Assignments", MB_OK | MB_ICONINFORMATION);
+    cout << promptText << ": ";
+    cin.getline(input, 256);
+    int value;
     cin >> value;
     return value;
 }
 
 int main() {
-    int numAssignments = prompt<int>(
+    // Step 1 – Just replace numAssignments with a full popup interaction
+    int numAssignments = popupInput<int>(
         "Enter number of assignments:",
-        "Enter a whole number, e.g., 3"
+        "Enter a whole number like 3"
     );
 
-    int numQuizzes = prompt<int>(
+    int numQuizzes = popupInput<int>(
         "Enter number of quizzes:",
-        "Enter a whole number, e.g., 2"
+        "Enter a whole number like 2"
     );
 
-    int numExams = prompt<int>(
+    int numExams = popupInput<int>(
         "Enter number of exams:",
-        "Enter a whole number, e.g., 1"
+        "Enter a whole number like 1"
     );
 
     vector<double> assignments, assignmentWeights;
@@ -50,39 +65,39 @@ int main() {
     vector<double> exams, examWeights;
 
     for (int i = 0; i < numAssignments; ++i) {
-        double score = prompt<double>(
+        double score = popupInput<double>(
             "Enter score for assignment " + to_string(i + 1) + ":",
-            "Enter a score out of 100, e.g., 85.5"
+            "Score out of 100"
         );
-        double weight = prompt<double>(
+        double weight = popupInput<double>(
             "Enter weight for assignment " + to_string(i + 1) + " (in decimal):",
-            "Enter weight as a decimal, e.g., 0.1 for 10%"
+            "e.g., 0.1 for 10%"
         );
         assignments.push_back(score);
         assignmentWeights.push_back(weight);
     }
 
     for (int i = 0; i < numQuizzes; ++i) {
-        double score = prompt<double>(
+        double score = popupInput<double>(
             "Enter score for quiz " + to_string(i + 1) + ":",
-            "Enter a score out of 100"
+            "Out of 100"
         );
-        double weight = prompt<double>(
+        double weight = popupInput<double>(
             "Enter weight for quiz " + to_string(i + 1) + " (in decimal):",
-            "Decimal format only, e.g., 0.05"
+            "e.g., 0.05"
         );
         quizzes.push_back(score);
         quizWeights.push_back(weight);
     }
 
     for (int i = 0; i < numExams; ++i) {
-        double score = prompt<double>(
+        double score = popupInput<double>(
             "Enter score for exam " + to_string(i + 1) + ":",
-            "Enter a score out of 100"
+            "Out of 100"
         );
-        double weight = prompt<double>(
+        double weight = popupInput<double>(
             "Enter weight for exam " + to_string(i + 1) + " (in decimal):",
-            "E.g., 0.4 for 40%"
+            "e.g., 0.4 for 40%"
         );
         exams.push_back(score);
         examWeights.push_back(weight);
