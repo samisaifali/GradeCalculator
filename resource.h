@@ -1,0 +1,2 @@
+#define IDD_INPUTBOX 101
+#define IDC_INPUT    1001

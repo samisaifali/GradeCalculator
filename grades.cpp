@@ -1,12 +1,55 @@
-#include <iostream>
-#include <vector>
-#include <string>
 #include <windows.h>
+#include <string>
+#include <vector>
 #include <sstream>
+#include "resource.h"
 
 using namespace std;
 
-// Function to calculate weighted average
+// Dialog input handler
+INT_PTR CALLBACK InputDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+    static string* inputBuffer;
+
+    switch (message) {
+    case WM_INITDIALOG:
+        inputBuffer = reinterpret_cast<string*>(lParam);
+        return TRUE;
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDOK) {
+            char buf[256];
+            GetDlgItemTextA(hDlg, IDC_INPUT, buf, sizeof(buf));
+            *inputBuffer = buf;
+            EndDialog(hDlg, IDOK);
+            return TRUE;
+        }
+        if (LOWORD(wParam) == IDCANCEL) {
+            EndDialog(hDlg, IDCANCEL);
+            return TRUE;
+        }
+        break;
+    }
+    return FALSE;
+}
+
+// Template function to get input via dialog
+template <typename T>
+T popupInput(const string& label, const string& instructions = "") {
+    string fullPrompt = label;
+    if (!instructions.empty()) fullPrompt += "\n\n" + instructions;
+    MessageBoxA(NULL, fullPrompt.c_str(), "Instructions", MB_OK | MB_ICONINFORMATION);
+
+    string inputText;
+    if (DialogBoxParamA(NULL, MAKEINTRESOURCEA(IDD_INPUTBOX), NULL, InputDlgProc, (LPARAM)&inputText) == IDOK) {
+        stringstream ss(inputText);
+        T value;
+        ss >> value;
+        return value;
+    } else {
+        ExitProcess(0); // user cancelled
+    }
+}
+
+// Calculate weighted average
 double calculateGrade(const vector<double>& scores, const vector<double>& weights) {
     double total = 0.0, weightSum = 0.0;
     for (size_t i = 0; i < scores.size(); ++i) {
@@ -16,91 +59,28 @@ double calculateGrade(const vector<double>& scores, const vector<double>& weight
     return (weightSum == 0) ? 0 : total / weightSum;
 }
 
-// Pop-up message box with input fallback in terminal
-template <typename T>
-T popupInput(const string& label, const string& instructions = "") {
-    string message = label + "\n\nPlease enter your response in the terminal.";
-    if (!instructions.empty()) {
-        message += "\n\n" + instructions;
-    }
-    MessageBoxA(NULL, message.c_str(), "Input Required", MB_OK | MB_ICONINFORMATION);
-    
-    cout << label << " ";
-    T value;
-    cin >> value;
-    return value;
-}
-
-// Step 1: Only numAssignments moved fully to popup
-int getIntInputPopup(const string& promptText) {
-    char input[256];
-    string label = promptText + "\n\n(Enter a number and click OK)";
-    MessageBoxA(NULL, label.c_str(), "Assignments", MB_OK | MB_ICONINFORMATION);
-    cout << promptText << ": ";
-    cin.getline(input, 256);
-    int value;
-    cin >> value;
-    return value;
-}
-
-int main() {
-    // Step 1 – Just replace numAssignments with a full popup interaction
-    int numAssignments = popupInput<int>(
-        "Enter number of assignments:",
-        "Enter a whole number like 3"
-    );
-
-    int numQuizzes = popupInput<int>(
-        "Enter number of quizzes:",
-        "Enter a whole number like 2"
-    );
-
-    int numExams = popupInput<int>(
-        "Enter number of exams:",
-        "Enter a whole number like 1"
-    );
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
+    int numAssignments = popupInput<int>("Enter number of assignments:", "E.g., 3");
+    int numQuizzes = popupInput<int>("Enter number of quizzes:", "E.g., 2");
+    int numExams = popupInput<int>("Enter number of exams:", "E.g., 1");
 
     vector<double> assignments, assignmentWeights;
     vector<double> quizzes, quizWeights;
     vector<double> exams, examWeights;
 
     for (int i = 0; i < numAssignments; ++i) {
-        double score = popupInput<double>(
-            "Enter score for assignment " + to_string(i + 1) + ":",
-            "Score out of 100"
-        );
-        double weight = popupInput<double>(
-            "Enter weight for assignment " + to_string(i + 1) + " (in decimal):",
-            "e.g., 0.1 for 10%"
-        );
-        assignments.push_back(score);
-        assignmentWeights.push_back(weight);
+        assignments.push_back(popupInput<double>("Assignment " + to_string(i + 1), "Score out of 100"));
+        assignmentWeights.push_back(popupInput<double>("Assignment " + to_string(i + 1), "Weight as decimal (e.g., 0.1)"));
     }
 
     for (int i = 0; i < numQuizzes; ++i) {
-        double score = popupInput<double>(
-            "Enter score for quiz " + to_string(i + 1) + ":",
-            "Out of 100"
-        );
-        double weight = popupInput<double>(
-            "Enter weight for quiz " + to_string(i + 1) + " (in decimal):",
-            "e.g., 0.05"
-        );
-        quizzes.push_back(score);
-        quizWeights.push_back(weight);
+        quizzes.push_back(popupInput<double>("Quiz " + to_string(i + 1), "Score out of 100"));
+        quizWeights.push_back(popupInput<double>("Quiz " + to_string(i + 1), "Weight as decimal (e.g., 0.05)"));
     }
 
     for (int i = 0; i < numExams; ++i) {
-        double score = popupInput<double>(
-            "Enter score for exam " + to_string(i + 1) + ":",
-            "Out of 100"
-        );
-        double weight = popupInput<double>(
-            "Enter weight for exam " + to_string(i + 1) + " (in decimal):",
-            "e.g., 0.4 for 40%"
-        );
-        exams.push_back(score);
-        examWeights.push_back(weight);
+        exams.push_back(popupInput<double>("Exam " + to_string(i + 1), "Score out of 100"));
+        examWeights.push_back(popupInput<double>("Exam " + to_string(i + 1), "Weight as decimal (e.g., 0.4)"));
     }
 
     double finalGrade = (calculateGrade(assignments, assignmentWeights) +
@@ -109,6 +89,5 @@ int main() {
 
     string result = "Final Grade: " + to_string(finalGrade) + "%";
     MessageBoxA(NULL, result.c_str(), "Final Grade", MB_OK | MB_ICONINFORMATION);
-
     return 0;
 }
